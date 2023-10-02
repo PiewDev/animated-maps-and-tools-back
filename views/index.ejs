@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <style>
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+        }
+        
+        #contenedor-flex {
+            display: flex;
+            margin: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        #tablaVideos {
+            flex: 1;
+            border-collapse: collapse;
+            width: 100%;
+        }
+        
+        #tablaVideos th, #tablaVideos td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        
+        #tablaVideos th {
+            background-color: #f2f2f2;
+        }
+        
+        #vistaPrevia {
+            max-width: 400px;
+            max-height: 300px;
+            margin-left: 20px;
+            overflow: hidden;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #fff;
+        }
+        
+        #vistaPrevia video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            pointer-events: none;
+        }
+            </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../public/index.css">
+    <title>Video Controls</title>
+</head>
+<body>    
+    <button onclick="playPause()">Play/Pause</button>
+    <button onclick="stop()">Stop</button>
+    <button onclick="openDisplay()">Open Display</button> <!-- Nuevo botón -->
+    
+    <label for="gridType">Select Grid:</label>
+    <select id="gridType" onchange="changeGridType()">
+        <option value="none">None</option>
+        <option value="grid">Grid</option>
+        <option value="hex">Hex</option>
+    </select>
+   <!-- Contenedor flexbox -->
+   <div id="contenedor-flex">
+    <!-- Tabla de videos -->
+    <table id="tablaVideos">
+        <thead>
+            <tr>
+                <th>Video</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% videos.forEach(video => { %>
+                <tr>
+                    <td><%= video %></td>
+                </tr>
+            <% }); %>
+        </tbody>
+    </table>
+
+    <!-- Vista previa del video -->
+    <div id="vistaPrevia"></div>
+</div>
+<!-- Vista previa del video -->
+<div id="vistaPrevia"></div>
+    
+    <button onclick="changeVideo()">Cambiar Video</button>
+
+    
+    <script src="../socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let videoSeleccionado = document.querySelector('#tablaVideos tbody tr:first-child td').textContent;
+        cambiarVistaPrevia(videoSeleccionado);    
+        // Llamar a la función al cargar la página
+        obtenerVideoSeleccionado();
+    
+        socket.on('controlsWindowOpened', () => {
+            console.log('Controls window opened');
+        });
+    
+        function playPause() {
+            console.log('emit', socket);
+            socket.emit('playPause');
+        }
+    
+        function stop() {
+            socket.emit('stop');
+        }
+    
+        function changeGridType() {
+            const selectedGridType = document.getElementById('gridType').value;
+            socket.emit('changeGridType', selectedGridType);
+        }
+    
+        // Nueva función para abrir el display
+        function openDisplay() {
+            const displayWindow = window.open('/display', 'Display', 'width=800,height=600');
+            socket.emit('displayWindowOpened');
+        }
+        function changeVideo() {
+            socket.emit('changeVideo',videoSeleccionado);
+        }
+        function obtenerVideoSeleccionado() {
+            // Obtener la tabla y la vista previa
+            const tablaVideos = document.getElementById('tablaVideos');
+          
+    
+            console.log('La función obtenerVideoSeleccionado se está ejecutando.');
+            // Escuchar el evento de clic en la tabla
+            tablaVideos.addEventListener('click', (event) => {
+     
+                const fila = event.target.closest('tr'); // Obtener la fila clicada
+    
+                if (fila) {
+                    videoSeleccionado = fila.querySelector('td').textContent;
+                    // Cambiar la vista previa al video seleccionado
+                    cambiarVistaPrevia(videoSeleccionado);
+                }
+            });
+        }
+        function cambiarVistaPrevia(video){
+            const vistaPrevia = document.getElementById('vistaPrevia');
+            vistaPrevia.innerHTML = `<video autoplay muted playsinline>
+                                                <source src="/video/${encodeURIComponent(videoSeleccionado)}" type="video/mp4">
+                                                Tu navegador no admite la etiqueta de video.
+                                            </video>`;
+        }
+    </script>
+
+</body>
+
+
+</html>

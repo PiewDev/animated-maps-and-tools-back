@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Display</title>
+    <style>
+        #canvas-container {
+    background-color: transparent;
+}
+        .hex {
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            transform: rotate(-90deg);
+        }
+
+        /* Estilo para el contenedor principal */
+        #display-container {
+            position: relative;
+            width: 640px;
+            /* Ajusta según el tamaño deseado del video */
+            height: 360px;
+            /* Ajusta según el tamaño deseado del video */
+            overflow: hidden;
+        }
+
+        /* Estilo para el video */
+        #videoPlayer {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Estilo para las celdas del tablero */
+        .grid-cell {
+            position: absolute;
+            box-sizing: border-box;
+            border: 1px solid #000;
+            /* Color del borde de las celdas */
+        }
+
+        .hex {
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            transform: rotate(-90deg);
+        }
+    </style>
+</head>
+
+<body>
+    <div id="canvas-container"></div>
+    <!-- Contenedor principal -->
+    <div id="display-container">
+        
+       
+        <!-- Video -->
+        <div id="video-container">
+            <video id="videoPlayer" autoplay controls>
+                <source id="videoSource" src="/video" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+        <!-- Canvas para la grilla hexagonal -->
+    </div>
+
+    <!-- Script para dibujar el tablero -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://unpkg.com/konva@8.3.2/konva.min.js"></script>
+    <script src="app.js"></script>
+    <script>
+        const socket = io();
+
+        socket.on('playPauseVideo', () => {
+            const video = document.getElementById('videoPlayer');
+            if (video.paused) {
+                video.play();
+            } else {
+                video.pause();
+            }
+        });
+        // Nueva lógica para aplicar el tipo de grid
+        socket.on('applyGridType', (selectedGridType) => {
+            console.log(selectedGridType);
+            applyGrid(selectedGridType);
+        });
+
+        socket.on('videoChanged', (videoName) => {
+            // Obtener el elemento de video y su fuente
+            console.log("cambio", videoName);
+            const videoPlayer = document.getElementById('videoPlayer');
+            const videoSource = document.getElementById('videoSource');
+
+            if (videoSource) {
+                // Construir la ruta relativa del video basándote en la variable Video
+                const relativeVideoPath = `/video/${videoName}`;
+
+                // Establecer la nueva fuente del video
+                videoSource.src = relativeVideoPath;
+                console.log("se recarga el video");
+                // Recargar y reproducir el video
+                videoPlayer.load();
+                videoPlayer.play();
+            } else {
+                console.error('Elemento videoSource no encontrado.');
+            }
+        });
+
+        function applyGrid(selectedGridType) {
+    const displayContainer = document.getElementById('display-container');
+    // Elimina todas las celdas existentes
+    const existingCells = document.querySelectorAll('.grid-cell');
+    existingCells.forEach(cell => displayContainer.removeChild(cell));
+
+    const rows = 8; // Ajusta según tus necesidades
+    const columns = 8; // Ajusta según tus necesidades
+
+    if (selectedGridType === 'grid') {
+        drawSquareGrid(displayContainer, rows, columns);
+    } else if (selectedGridType === 'hex') {
+        drawHexagonalGrid(displayContainer, rows, columns);
+    }
+}
+
+function drawSquareGrid(displayContainer, rows, columns) {
+    const cellSize = 100; // Ajusta según tus necesidades
+
+    for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < columns; col++) {
+            const cell = document.createElement('div');
+            cell.classList.add('grid-cell');
+            cell.style.width = `${cellSize}px`;
+            cell.style.height = `${cellSize}px`;
+            cell.style.top = `${row * cellSize}px`;
+            cell.style.left = `${col * cellSize}px`;
+
+            displayContainer.appendChild(cell);
+        }
+    }
+}
+
+function drawHexagonalGrid(displayContainer, rows, columns) {
+    const stage = new Konva.Stage({
+        container: 'display-container',
+    width: window.innerWidth,
+    height: window.innerHeight,
+    draggable: true,
+    pixelRatio: window.devicePixelRatio, // Configurar pixelRatio
+    opacity: 0.5,
+    background: 'transparent',
+    });
+
+    const layer = new Konva.Layer();
+    stage.add(layer);
+
+    const hexRadius = 30;
+    const hexWidth = Math.sqrt(3) * hexRadius;
+    const hexHeight = 2 * hexRadius;
+
+    for (let row = 0; row < rows; row++) {
+        const offset = row % 2 === 0 ? 0 : hexWidth / 2;
+
+        for (let col = 0; col < columns; col++) {
+            const x = col * hexWidth + offset;
+            const y = row * (hexHeight * 3 / 4);
+
+            const hexagon = new Konva.RegularPolygon({
+                x: x,
+                y: y,
+                sides: 6,
+                radius: hexRadius,
+                fill: 'transparent',
+                stroke: 'black',
+                strokeWidth: 1,
+            });
+
+            layer.add(hexagon);
+        }
+    }
+
+    stage.draw();
+}
+    </script>
+</body>
+
+</html>
